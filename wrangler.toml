@@ -1,0 +1,22 @@
+name = "hdsc-vci-social-relay"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+# Create once with:  npx wrangler kv namespace create STORE   and paste the id below.
+[[kv_namespaces]]
+binding = "STORE"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+
+[vars]
+PUBLIC_URL = "https://hdsc-vci-social-relay.REPLACE.workers.dev"
+# Browser origins allowed to call the relay (the desktop app is always allowed).
+ALLOWED_ORIGINS = "http://localhost:5173,http://localhost:8081"
+META_GRAPH_VERSION = "v23.0"
+LINKEDIN_VERSION = "202610"
+DAILY_EMAIL_LIMIT = "40"
+DAILY_DM_LIMIT = "20"
+# Secrets (never put these here). Set each with:  npx wrangler secret put NAME
+# RELAY_OWNER_TOKEN, TOKEN_KEY, LINKEDIN_CLIENT_ID, LINKEDIN_CLIENT_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
+# MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET, X_CLIENT_ID, X_CLIENT_SECRET, META_APP_ID, META_APP_SECRET,
+# TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET, CANVA_CLIENT_ID, CANVA_CLIENT_SECRET, ANTHROPIC_API_KEY (optional)
