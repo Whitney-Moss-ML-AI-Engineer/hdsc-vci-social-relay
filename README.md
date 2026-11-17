@@ -18,7 +18,30 @@ It is the fourth isolated project next to hdsc-vci-crm, hdsc-vci-web and hdsc-vc
 
 Nothing is sent on a schedule or in bulk. One press of Send in the app = one post or one message.
 
-## Set up (about 30 minutes for the relay, plus each app's developer sign-up)
+## Quick setup (wizard, about 10 minutes)
+
+1. Install **Node.js 20 or newer** from nodejs.org (the "LTS" button).
+2. Download this project (green **Code** button → **Download ZIP**) and unzip it.
+3. Open a terminal in the unzipped folder (Windows: right-click the folder → **Open in Terminal**; Mac: right-click → **New Terminal at Folder**) and run:
+   ```
+   npm install
+   npm run setup
+   ```
+4. The wizard walks you through five steps: it opens Cloudflare so you can sign in (a free account is fine), creates private
+   storage, puts the relay online, creates your keys, and checks that it works. If anything stops, run `npm run setup` again;
+   finished steps are skipped.
+5. At the end it prints a **connection code** that starts with `hdscrelay:`. In the app go to **Connections → Your relay**,
+   paste the code and press **Save & test**.
+6. Next to each app in Connections (Canva, LinkedIn, Gmail, Outlook, X, Facebook + Instagram, TikTok), press **Set up**. The
+   guide shows the exact page to open, a button to copy the redirect link, and boxes to paste the two keys the platform gives
+   you. Then press **Connect** and sign in. You never need the command line for this part.
+
+`npm run setup -- --show` prints your connection code again. `npm run setup -- --new-key` replaces it (then paste the new
+code into each app). Keep the code private; it works like a password.
+
+<details><summary>Manual setup (without the wizard)</summary>
+
+### Manual steps
 
 1. Install Node 20+ and run `npm install` in this folder.
 2. `npx wrangler login` (opens Cloudflare; a free account is fine).
@@ -32,7 +55,7 @@ Nothing is sent on a schedule or in bulk. One press of Send in the app = one pos
    ```
 5. `npx wrangler deploy`. Put the address it prints (for example `https://hdsc-vci-social-relay.<you>.workers.dev`) in `PUBLIC_URL` in `wrangler.toml` and deploy again.
 6. In each app, open **Connections → Relay**, paste the address and the relay key.
-7. For each app you want, create a developer app, set its redirect URL to `PUBLIC_URL/v1/callback/<name>`, and store its keys with `npx wrangler secret put`:
+7. For each app you want, create a developer app (or use **Set up** in the app's Connections screen instead of these commands), set its redirect URL to `PUBLIC_URL/v1/callback/<name>`, and store its keys with `npx wrangler secret put`:
 
 | App | Where | Redirect URL ends with | Secrets |
 |---|---|---|---|
@@ -47,12 +70,14 @@ Nothing is sent on a schedule or in bulk. One press of Send in the app = one pos
 8. Optional: `npx wrangler secret put ANTHROPIC_API_KEY` turns on the "Polish" button in the script generator. It rewrites tone only and never adds facts.
 9. Add any browser origin that will call the relay (the hosted web app) to `ALLOWED_ORIGINS`. The desktop app and the phone app need nothing here.
 
+</details>
+
 While your Meta, TikTok and LinkedIn Company Page apps are in development mode they work for your own accounts, which is all this relay needs. Meta needs app review only if other people will use your app.
 
 ## Security
 
 - Every route except the OAuth callback and TikTok photo pulls requires `Authorization: Bearer <RELAY_OWNER_TOKEN>` (compared in constant time, minimum 32 characters).
-- Provider tokens are encrypted with AES-256-GCM (`TOKEN_KEY`) before they are written to KV. OAuth `state` values are random, single-use and expire in 10 minutes; PKCE is used wherever the provider supports it.
+- Provider tokens and any app keys pasted in the app are encrypted with AES-256-GCM (`TOKEN_KEY`) before they are written to KV; saved secrets are never sent back to the app. OAuth `state` values are random, single-use and expire in 10 minutes; PKCE is used wherever the provider supports it.
 - Browser CORS is limited to `ALLOWED_ORIGINS` plus the desktop app's `app://bundle` origin.
 - Email: one recipient per request, address source required, opt-out line required, no header injection, daily caps. Every post and message is recorded in a 500-entry log (`GET /v1/log`).
 - No scraping and no browser automation of any site.
@@ -72,7 +97,10 @@ While your Meta, TikTok and LinkedIn Company Page apps are in development mode t
 | POST | `/v1/message` | `{ channel: gmail|outlook|x_dm, to, subject?, text, recipient_source? }` |
 | POST | `/v1/polish` | `{ text, tone?, limit?, kind? }` |
 | GET | `/v1/log` | — |
+| GET | `/v1/setup` | — → step-by-step guide and redirect URL for each app, and whether its keys are saved |
+| POST | `/v1/credentials/{app}` | `{ client_id, client_secret }` (Anthropic: `{ client_id: <api key> }`). Stored encrypted; never returned. Worker secrets take priority. |
+| DELETE | `/v1/credentials/{app}` | — |
 
 ## Develop
 
-`npm test` (19 tests, all network calls mocked) and `npm run typecheck`. `npx wrangler dev` runs it locally with a `.dev.vars` file for secrets (git-ignored).
+`npm test` (30 tests, all network and Cloudflare calls mocked) and `npm run typecheck`. `npx wrangler dev` runs it locally with a `.dev.vars` file for secrets (git-ignored).

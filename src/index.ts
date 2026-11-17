@@ -9,6 +9,7 @@ import { SIZES, createDesign, exportDesign, listDesigns, type ExportFormat } fro
 import { publish, type PostRequest } from "./actions/post";
 import { sendMessage, type MessageRequest } from "./actions/message";
 import { polish } from "./actions/polish";
+import { deleteCredentials, effectiveEnv, saveCredentials, setupInfo } from "./setup";
 
 const DESKTOP_ORIGIN = "app://bundle";
 
@@ -40,7 +41,8 @@ async function body<T>(req: Request): Promise<T> {
   try { return await req.json() as T; } catch { throw new HttpError(400, "Expected a JSON body."); }
 }
 
-export async function handle(req: Request, env: Env, f: typeof fetch = fetch): Promise<Response> {
+export async function handle(req: Request, rawEnv: Env, f: typeof fetch = fetch): Promise<Response> {
+  const env = await effectiveEnv(rawEnv);
   const url = new URL(req.url);
   const path = url.pathname.replace(/\/+$/, "");
   const cors = corsHeaders(env, req.headers.get("Origin"));
@@ -83,11 +85,15 @@ export async function handle(req: Request, env: Env, f: typeof fetch = fetch): P
       }
       return json({ accounts: out, polish_available: !!env.ANTHROPIC_API_KEY, canva_sizes: SIZES }, 200, cors);
     }
+    if (path === "/v1/setup" && req.method === "GET") return json(await setupInfo(rawEnv), 200, cors);
+    m = path.match(/^\/v1\/credentials\/([a-z]+)$/);
+    if (m && req.method === "POST") return json(await saveCredentials(rawEnv, m[1], await body(req)), 200, cors);
+    if (m && req.method === "DELETE") return json(await deleteCredentials(rawEnv, m[1]), 200, cors);
     m = path.match(/^\/v1\/connect\/([a-z]+)$/);
     if (m && req.method === "POST") {
       const p = m[1];
       if (!isProvider(p)) throw new HttpError(404, "Unknown app.");
-      if (!configured(env, p)) throw new HttpError(409, `${PROVIDERS[p].label} isn't set up on your relay yet. Add its client ID and secret (see the relay README).`);
+      if (!configured(env, p)) throw new HttpError(409, `${PROVIDERS[p].label} isn't set up yet. Tap Set up next to it in Connections and paste its keys.`);
       const verifier = newVerifier();
       const state = await putState(env, { provider: p, verifier, created: Date.now() });
       return json({ url: await authorizeUrl(env, p, state, verifier) }, 200, cors);
