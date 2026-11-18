@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/hdsc-logo-square.png" alt="Heavy Duty Security Co." width="160"></p>
+
 # hdsc-vci-social-relay
 
 The small cloud function that lets the HDSC VC Intelligence apps (desktop, web, phone) post to your own social accounts, send one-to-one emails and X messages, and pull designs from Canva. It runs on your own free Cloudflare account. Nobody else can use it: every call needs your relay key.
